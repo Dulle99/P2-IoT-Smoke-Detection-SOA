@@ -1,0 +1,25 @@
+# Visual Studio
+.vs/
+**/.vs/
+
+# Build outputs
+bin/
+obj/
+**/bin/
+**/obj/
+
+# User-specific files
+*.user
+*.suo
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
+
+#data
+data/*.csv
