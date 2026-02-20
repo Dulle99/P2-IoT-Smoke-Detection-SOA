@@ -1,13 +1,18 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>5b03e59e-c8a6-4294-a820-589b9237e0ad</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.3" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
+    <PackageReference Include="MQTTnet" Version="5.1.0.1559" />
+    <PackageReference Include="MQTTnet.Extensions.ManagedClient" Version="4.3.7.1207" />
   </ItemGroup>
 
 </Project>

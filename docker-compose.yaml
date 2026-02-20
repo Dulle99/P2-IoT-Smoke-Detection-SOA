@@ -1,0 +1,63 @@
+version: '3.9'
+
+services:
+
+  mosquitto:
+    image: eclipse-mosquitto
+    container_name: mosquitto
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./infra/mosquitto:/mosquitto/config
+    networks:
+      - iot-network
+
+  influxdb:
+    image: influxdb:2.7
+    container_name: influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: password
+      DOCKER_INFLUXDB_INIT_ORG: iot-org
+      DOCKER_INFLUXDB_INIT_BUCKET: smoke-bucket
+    networks:
+      - iot-network
+
+  ekuiper:
+    image: lfedge/ekuiper:latest
+    container_name: ekuiper
+    ports:
+      - "9081:9081"
+    networks:
+      - iot-network
+
+  analytics-service:
+    build:
+      context: ./src/AnalyticsService/AnalyticsService
+      dockerfile: Dockerfile
+    container_name: analytics-service
+    depends_on:
+      - mosquitto
+      - influxdb
+      - ekuiper
+    ports:
+      - "5001:8080"
+    networks:
+      - iot-network
+
+  notification-service:
+    build:
+      context: ./src/NotificationService
+      dockerfile: Dockerfile
+    container_name: notification-service
+    ports:
+      - "5002:3000"
+    networks:
+      - iot-network
+
+networks:
+  iot-network:
+    driver: bridge
