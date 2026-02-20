@@ -12,6 +12,12 @@ namespace AnalyticsService.Services
     public class MqttSubscriberService : BackgroundService
     {
         private IMqttClient _mqttClient;
+        private readonly IEventWriter _eventWriter;
+
+        public MqttSubscriberService(IEventWriter eventWriter)
+        {
+            _eventWriter = eventWriter;
+        }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
@@ -23,7 +29,7 @@ namespace AnalyticsService.Services
                 .WithClientId("analytics-service")
                 .Build();
 
-            _mqttClient.ApplicationMessageReceivedAsync += e =>
+            _mqttClient.ApplicationMessageReceivedAsync += async e =>
             {
                 var payload = Encoding.UTF8.GetString(e.ApplicationMessage.Payload);
                 try
@@ -32,16 +38,36 @@ namespace AnalyticsService.Services
                     if(reading == null)
                     {
                         Console.WriteLine($"Invalid JSON payload");
-                        return Task.CompletedTask;
+                        return;
                     }
 
-                    Console.WriteLine($"Received reading: DeviceId={reading.DeviceId}, Temperature={reading.Temperature}, SmokeLevel={reading.SmokeLevel}, Timestamp={reading.TimestampUtc}");
+                    if(!DateTimeOffset.TryParse(reading.TimestampUtc, out var timestamp))
+                    {
+                        Console.WriteLine($"Invalid timestamp format: {reading.TimestampUtc}");
+                        return;
+                    }
+
+                    if (reading.SmokeLevel >= 70)
+                    {
+                        Console.WriteLine($"EVENT DETECTED: from {reading.DeviceId} (Smoke={reading.SmokeLevel})");
+
+                        try
+                        {
+                            await _eventWriter.WriteSmokeEventAsync(reading.DeviceId, reading.SmokeLevel, reading.Temperature, timestamp.UtcDateTime, stoppingToken);
+                            Console.WriteLine(" Event written to InfluxDB");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Error writing event: {ex.Message}");
+                        }
+                    
+                    }
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Error deserializing message: {ex.Message}");
                 }
-                return Task.CompletedTask;
+                return;
             };
 
             await _mqttClient.ConnectAsync(options, stoppingToken);

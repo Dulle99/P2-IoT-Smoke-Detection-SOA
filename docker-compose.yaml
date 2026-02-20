@@ -23,6 +23,7 @@ services:
       DOCKER_INFLUXDB_INIT_PASSWORD: password
       DOCKER_INFLUXDB_INIT_ORG: iot-org
       DOCKER_INFLUXDB_INIT_BUCKET: smoke-bucket
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: supersecrettoken
     networks:
       - iot-network
 

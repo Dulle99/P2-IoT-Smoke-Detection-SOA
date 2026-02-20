@@ -6,7 +6,7 @@
         string DeviceId,
         double Temperature,
         double SmokeLevel,
-        DateTime TimestampUtc
+        string TimestampUtc
     );
 
 }
