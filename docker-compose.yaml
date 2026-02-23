@@ -34,6 +34,11 @@ services:
       - "9081:9081"
     networks:
       - iot-network
+    environment:
+       MQTT_SOURCE__DEFAULT__SERVERS__0: tcp://mosquitto:1883
+       MQTT_SOURCE__DEFAULT__QOS: "1"
+    volumes:
+      - ./infra/ekuiper/mqtt_source.yaml:/kuiper/etc/mqtt_source.yaml
 
   analytics-service:
     build:

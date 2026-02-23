@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+option csharp_namespace = "AnalyticsService.Protos";
+
+package notification;
+
+service NotificationService{
+    rpc SendSmokeAlert (SmokeAlertRequest) returns (SmokeAlertResponse);
+}
+
+message SmokeAlertRequest{
+    string deviceId = 1;
+  double smokeLevel = 2;
+  double temperature = 3;
+  string timestampUtc = 4;
+}
+
+message SmokeAlertResponse {
+  string status = 1;
+}

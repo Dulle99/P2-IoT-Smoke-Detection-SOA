@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AnalyticsService.Dtos;
+using AnalyticsService.Protos;
 using Microsoft.Extensions.Hosting;
 using MQTTnet;
 
@@ -13,10 +14,12 @@ namespace AnalyticsService.Services
     {
         private IMqttClient _mqttClient;
         private readonly IEventWriter _eventWriter;
+        private readonly NotificationService.NotificationServiceClient _notificationClient;
 
-        public MqttSubscriberService(IEventWriter eventWriter)
+        public MqttSubscriberService(IEventWriter eventWriter, NotificationService.NotificationServiceClient notificationClient)
         {
             _eventWriter = eventWriter;
+            _notificationClient = notificationClient;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -55,10 +58,22 @@ namespace AnalyticsService.Services
                         {
                             await _eventWriter.WriteSmokeEventAsync(reading.DeviceId, reading.SmokeLevel, reading.Temperature, timestamp.UtcDateTime, stoppingToken);
                             Console.WriteLine(" Event written to InfluxDB");
+
+                            //grpc notification
+                            var req = new SmokeAlertRequest
+                            {
+                                DeviceId = reading.DeviceId,
+                                SmokeLevel = reading.SmokeLevel,
+                                Temperature = reading.Temperature,
+                                TimestampUtc = timestamp.UtcDateTime.ToString("o")
+                            };
+
+                            var resp = await _notificationClient.SendSmokeAlertAsync(req, cancellationToken: stoppingToken);
+                            Console.WriteLine($"Notification response: {resp.Status}");
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine($"Error writing event: {ex.Message}");
+                            Console.WriteLine($"gRPC call failed: {ex.Message}");
                         }
                     
                     }
