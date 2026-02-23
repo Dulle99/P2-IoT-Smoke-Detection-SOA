@@ -23,3 +23,7 @@ yarn-error.log*
 
 #data
 data/*.csv
+
+# eKuiper runtime (NE commitovati)
+infra/ekuiper/data/
+infra/ekuiper/log/

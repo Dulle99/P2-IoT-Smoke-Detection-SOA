@@ -1,4 +1,4 @@
-#Global MQTT configurations
+# Global MQTT configurations
 default:
   qos: 1
   server: "tcp://mosquitto:1883"

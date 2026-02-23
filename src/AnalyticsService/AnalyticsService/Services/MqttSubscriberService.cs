@@ -37,46 +37,45 @@ namespace AnalyticsService.Services
                 var payload = Encoding.UTF8.GetString(e.ApplicationMessage.Payload);
                 try
                 {
-                    var reading = JsonSerializer.Deserialize<ReadingDto>(payload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true});
-                    if(reading == null)
+                    var reading = JsonSerializer.Deserialize<ReadingDto>(payload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    if (reading == null)
                     {
                         Console.WriteLine($"Invalid JSON payload");
                         return;
                     }
 
-                    if(!DateTimeOffset.TryParse(reading.TimestampUtc, out var timestamp))
+                    if (!DateTimeOffset.TryParse(reading.TimestampUtc, out var timestamp))
                     {
                         Console.WriteLine($"Invalid timestamp format: {reading.TimestampUtc}");
                         return;
                     }
 
-                    if (reading.SmokeLevel >= 70)
+
+                    Console.WriteLine($"EVENT DETECTED: from {reading.DeviceId} (Smoke={reading.SmokeLevel})");
+
+                    try
                     {
-                        Console.WriteLine($"EVENT DETECTED: from {reading.DeviceId} (Smoke={reading.SmokeLevel})");
+                        await _eventWriter.WriteSmokeEventAsync(reading.DeviceId, reading.SmokeLevel, reading.Temperature, timestamp.UtcDateTime, stoppingToken);
+                        Console.WriteLine(" Event written to InfluxDB");
 
-                        try
+                        //grpc notification
+                        var req = new SmokeAlertRequest
                         {
-                            await _eventWriter.WriteSmokeEventAsync(reading.DeviceId, reading.SmokeLevel, reading.Temperature, timestamp.UtcDateTime, stoppingToken);
-                            Console.WriteLine(" Event written to InfluxDB");
+                            DeviceId = reading.DeviceId,
+                            SmokeLevel = reading.SmokeLevel,
+                            Temperature = reading.Temperature,
+                            TimestampUtc = timestamp.UtcDateTime.ToString("o")
+                        };
 
-                            //grpc notification
-                            var req = new SmokeAlertRequest
-                            {
-                                DeviceId = reading.DeviceId,
-                                SmokeLevel = reading.SmokeLevel,
-                                Temperature = reading.Temperature,
-                                TimestampUtc = timestamp.UtcDateTime.ToString("o")
-                            };
-
-                            var resp = await _notificationClient.SendSmokeAlertAsync(req, cancellationToken: stoppingToken);
-                            Console.WriteLine($"Notification response: {resp.Status}");
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"gRPC call failed: {ex.Message}");
-                        }
-                    
+                        var resp = await _notificationClient.SendSmokeAlertAsync(req, cancellationToken: stoppingToken);
+                        Console.WriteLine($"Notification response: {resp.Status}");
                     }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"gRPC call failed: {ex.Message}");
+                    }
+
+
                 }
                 catch (Exception ex)
                 {
@@ -88,7 +87,7 @@ namespace AnalyticsService.Services
             await _mqttClient.ConnectAsync(options, stoppingToken);
             Console.WriteLine("Connected to MQTT broker");
 
-            await _mqttClient.SubscribeAsync("iot/smoke/readings");
+            await _mqttClient.SubscribeAsync("iot/smoke/events");
             Console.WriteLine("Subscribed to topic: iot/smoke/readings");
 
             while (!stoppingToken.IsCancellationRequested)
