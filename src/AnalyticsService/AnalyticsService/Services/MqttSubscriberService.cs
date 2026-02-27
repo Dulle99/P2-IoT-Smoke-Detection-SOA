@@ -35,9 +35,31 @@ namespace AnalyticsService.Services
             _mqttClient.ApplicationMessageReceivedAsync += async e =>
             {
                 var payload = Encoding.UTF8.GetString(e.ApplicationMessage.Payload);
+               
                 try
                 {
-                    var reading = JsonSerializer.Deserialize<ReadingDto>(payload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    payload = payload.Trim();
+
+                    ReadingDto? reading = null;
+
+                    var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+                    if (payload.StartsWith("["))
+                    {
+                        var list = JsonSerializer.Deserialize<List<ReadingDto>>(payload, opts);
+                        reading = list?.FirstOrDefault();
+                    }
+                    else
+                    {
+                        reading = JsonSerializer.Deserialize<ReadingDto>(payload, opts);
+                    }
+
+                    /*if (reading is null)
+                    {
+                        Console.WriteLine("Invalid JSON payload");
+                        return;
+                    }
+                    var reading = JsonSerializer.Deserialize<ReadingDto>(payload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });*/
                     if (reading == null)
                     {
                         Console.WriteLine($"Invalid JSON payload");
@@ -88,7 +110,7 @@ namespace AnalyticsService.Services
             Console.WriteLine("Connected to MQTT broker");
 
             await _mqttClient.SubscribeAsync("iot/smoke/events");
-            Console.WriteLine("Subscribed to topic: iot/smoke/readings");
+            Console.WriteLine("Subscribed to topic: iot/smoke/events");
 
             while (!stoppingToken.IsCancellationRequested)
             {

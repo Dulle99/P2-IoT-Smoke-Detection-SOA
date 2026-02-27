@@ -1,6 +1,8 @@
 ﻿using GatewayService.Dtos;
+using GatewayService.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace GatewayService.Controllers
 {
@@ -9,11 +11,13 @@ namespace GatewayService.Controllers
     public class ReadingController : ControllerBase
     {
         private readonly HttpClient _httpClient;
+        private readonly MqttPublisher _mqttPublisher;
         private readonly IConfiguration _config;
 
-        public ReadingController(HttpClient httpClient, IConfiguration configuration)
+        public ReadingController(HttpClient httpClient,MqttPublisher mqttPublisher, IConfiguration configuration)
         {
             _httpClient = httpClient;
+            _mqttPublisher = mqttPublisher;
             _config = configuration;
         }
 
@@ -29,7 +33,7 @@ namespace GatewayService.Controllers
         }
 
         // POST /api/readings --> Forward to Data Service POST /readings
-        [HttpPost]
+        [HttpPost("db")]
         public async Task<IActionResult> Create([FromBody] CreateReadingDto dto)
         {
             var url = $"{DataServiceBaseUrl()}/readings";
@@ -37,6 +41,15 @@ namespace GatewayService.Controllers
 
             var body = await response.Content.ReadAsStringAsync();
             return StatusCode((int)response.StatusCode, body);
+        }
+
+        // POST /api/readings --> Forward to Broker MQTT
+        [HttpPost]
+        public async Task<IActionResult> Post([FromBody] CreateReadingBrokerDto dto, CancellationToken ctoken)
+        {
+            var json = JsonSerializer.Serialize(dto);
+            await _mqttPublisher.PublishJsonAsync(json, ctoken);
+            return Ok(new { message = "Reading published to MQTT broker." });
         }
 
         //GET /api/readings?limit={limit} --> forward to Data Service GET /readings

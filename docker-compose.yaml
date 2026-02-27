@@ -66,6 +66,52 @@ services:
     networks:
       - iot-network
 
+  mongo:
+      image: mongo:7
+      container_name: smoke-mongo
+      ports:
+        - "27017:27017"
+      volumes:
+        - smoke_mongo_data:/data/db
+      networks:
+        - iot-network
+  dataservice:
+    build:
+      context: ./src/DataService
+    container_name: smoke-dataservice
+    environment:
+      - PORT=5001
+      - MONGO_URL=mongodb://mongo:27017
+      - DB_NAME=smoke
+    depends_on:
+      - mongo
+    ports:
+      - "5003:5001"
+    networks:
+      - iot-network
+
+  gateway-service:
+    build:
+      context: ./src/GatewayService
+      dockerfile: Dockerfile
+    container_name: gateway-service
+    depends_on:
+      - mosquitto
+      - dataservice
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      MQTT_BROKER_HOST: mosquitto
+      MQTT_BROKER_PORT: "1883"
+      MQTT_TOPIC_READINGS: iot/smoke/readings
+    ports:
+      - "5000:8080"
+    networks:
+      - iot-network
+
 networks:
   iot-network:
     driver: bridge
+
+volumes:
+  smoke_mongo_data:
