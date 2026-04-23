@@ -16,6 +16,7 @@ namespace GatewayService.Services
             _port = int.TryParse(Environment.GetEnvironmentVariable("MQTT_BROKER_PORT"), out var p) ? p : 1883;
             _topic = Environment.GetEnvironmentVariable("MQTT_TOPIC_READINGS") ?? "iot/smoke/readings";
 
+
             var factory = new MqttClientFactory();
             _mqttClient = factory.CreateMqttClient();
         }
