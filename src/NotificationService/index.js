@@ -7,13 +7,13 @@ const mqtt = require("mqtt");
 const PROTO_PATH = path.join(__dirname, "notification.proto");
 
 // MQTT configuration
-const MQQT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
+const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
 const MQTT_TOPIC_NOTIFICATIONS = process.env.MQTT_TOPIC_NOTIFICATIONS || "iot/smoke/notifications";
 
-const mqttClient = mqtt.connect(MQQT_BROKER_URL);
+const mqttClient = mqtt.connect(MQTT_BROKER_URL);
 
 mqttClient.on("connect", () => {
-    console.log(`Connected to MQTT broker at ${MQQT_BROKER_URL}`);
+    console.log(`Connected to MQTT broker at ${MQTT_BROKER_URL}`);
 });
 mqttClient.on("error", (err) => {
     console.error("Failed to connect to MQTT broker:", err);
@@ -46,12 +46,12 @@ function sendSmokeAlert(call, callback) {
     mqttClient.publish(MQTT_TOPIC_NOTIFICATIONS, JSON.stringify(notification), { qos: 1 }, (err) => {
         if(err) {
             console.error("Failed to publish MQTT message:", err);
-            callback(null, {status: "ERROR", message: "Failed to publish MQTT message"});
+            callback(null, { status: "FAILED_TO_PUBLISH_NOTIFICATION" });
             return;
         }
 
         console.log("Published smoke alert to MQTT topic:", MQTT_TOPIC_NOTIFICATIONS);
-        callback(null, { success: true, message: "Smoke alert sent successfully" });
+        callback(null, { status: "OK" });
     });
 }
 

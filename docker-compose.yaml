@@ -107,6 +107,7 @@ services:
       MQTT_BROKER_HOST: mosquitto
       MQTT_BROKER_PORT: "1883"
       MQTT_TOPIC_READINGS: iot/smoke/readings
+      DataService__BaseUrl: http://dataservice:5001
     ports:
       - "5000:8080"
     networks:
