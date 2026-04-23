@@ -1,8 +1,6 @@
 ﻿using GatewayService.Dtos;
-using GatewayService.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System.Text.Json;
 
 namespace GatewayService.Controllers
 {
@@ -11,13 +9,11 @@ namespace GatewayService.Controllers
     public class ReadingController : ControllerBase
     {
         private readonly HttpClient _httpClient;
-        private readonly MqttPublisher _mqttPublisher;
         private readonly IConfiguration _config;
 
-        public ReadingController(HttpClient httpClient,MqttPublisher mqttPublisher, IConfiguration configuration)
+        public ReadingController(HttpClient httpClient, IConfiguration configuration)
         {
             _httpClient = httpClient;
-            _mqttPublisher = mqttPublisher;
             _config = configuration;
         }
 
@@ -33,7 +29,7 @@ namespace GatewayService.Controllers
         }
 
         // POST /api/readings --> Forward to Data Service POST /readings
-        [HttpPost("db")]
+        [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateReadingDto dto)
         {
             var url = $"{DataServiceBaseUrl()}/readings";
@@ -43,18 +39,9 @@ namespace GatewayService.Controllers
             return StatusCode((int)response.StatusCode, body);
         }
 
-        // POST /api/readings --> Forward to Broker MQTT
-        [HttpPost]
-        public async Task<IActionResult> Post([FromBody] CreateReadingBrokerDto dto, CancellationToken ctoken)
-        {
-            var json = JsonSerializer.Serialize(dto);
-            await _mqttPublisher.PublishJsonAsync(json, ctoken);
-            return Ok(new { message = "Reading published to MQTT broker." });
-        }
-
         //GET /api/readings?limit={limit} --> forward to Data Service GET /readings
         [HttpGet()]
-        public async Task<IActionResult> Get([FromQuery]int limit = 1)
+        public async Task<IActionResult> Get([FromQuery] int limit = 1)
         {
             var url = $"{DataServiceBaseUrl()}/readings?limit={limit}";
             var response = await _httpClient.GetAsync(url);
@@ -68,6 +55,25 @@ namespace GatewayService.Controllers
         {
             var url = $"{DataServiceBaseUrl()}/readings/{id}";
             var response = await _httpClient.GetAsync(url);
+            var body = await response.Content.ReadAsStringAsync();
+            return StatusCode((int)response.StatusCode, body);
+        }
+
+        // PUT /api/readings/{id} --> forward to Data Service PUT /readings/{id}
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update([FromRoute] string id, [FromBody] CreateReadingDto dto)
+        {
+            var url = $"{DataServiceBaseUrl()}/readings/{id}";
+            var response = await _httpClient.PutAsJsonAsync(url, dto);
+            var body = await response.Content.ReadAsStringAsync();
+            return StatusCode((int)response.StatusCode, body);
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete([FromRoute] string id)
+        {
+            var url = $"{DataServiceBaseUrl()}/readings/{id}";
+            var response = await _httpClient.DeleteAsync(url);
             var body = await response.Content.ReadAsStringAsync();
             return StatusCode((int)response.StatusCode, body);
         }

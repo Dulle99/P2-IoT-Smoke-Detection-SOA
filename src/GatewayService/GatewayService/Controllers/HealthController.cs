@@ -5,7 +5,7 @@ namespace GatewayService.Controllers
 {
     [Route("api/health")]
     [ApiController]
-    public class HealthControler : ControllerBase
+    public class HealthController : ControllerBase
     {
         [HttpGet]
         public IActionResult Get()

@@ -61,6 +61,9 @@ services:
       context: ./src/NotificationService
       dockerfile: Dockerfile
     container_name: notification-service
+    environment:
+      - MQTT_BROKER_URL=mqtt://mosquitto:1883
+      - MQTT_TOPIC_NOTIFICATIONS=iot/smoke/notifications
     ports:
       - "5002:3000"
     networks:

@@ -12,14 +12,13 @@ const CSV_PATH = process.env.CSV_PATH || path.resolve(__dirname, "..", "..", "da
 
 //Map CSV row -> MongoDB document
 function mapRowToDoc(row) {
-    const utc = Number(row["utc"]);
+    const utc = Number(row["UTC"] ?? row["utc"] ?? row["Utc"]);
     const temperatureC = Number(row["Temperature[C]"]);
     const humidityPercent = Number(row["Humidity[%]"]);
     const eCo2Ppm = Number(row["eCO2[ppm]"]);
     const tVocPpb = Number(row["TVOC[ppb]"]);
     const pressureHpa = Number(row["Pressure[hPa]"]);
     const pm25 = Number(row["PM2.5"]);
-
     const fireAlarm = String(row["Fire Alarm"]).trim() === "1";
 
     return {
