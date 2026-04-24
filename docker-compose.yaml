@@ -39,8 +39,22 @@ services:
       MQTT_SOURCE__DEFAULT__QOS: "1"
     volumes:
       - ./infra/ekuiper/mqtt_source.yaml:/kuiper/etc/mqtt_source.yaml
+      - ./infra/ekuiper/smoke-ruleset.json:/kuiper/etc/smoke-ruleset.json
       - ./infra/ekuiper/data:/kuiper/data
       - ./infra/ekuiper/log:/kuiper/log
+  
+  ekuiper-init:
+    image: alpine:3.20
+    container_name: ekuiper-init
+    depends_on:
+      - ekuiper
+    volumes:
+      - ./infra/ekuiper/init-rules.sh:/init-rules.sh:ro
+      - ./infra/ekuiper/smoke-ruleset.json:/rules/smoke-ruleset.json:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command: "apk add --no-cache wget jq && sh /init-rules.sh"
+    networks:
+      - iot-network
 
   analytics-service:
     build:

@@ -39,13 +39,22 @@ namespace GatewayService.Controllers
         {
             var url = $"{DataServiceBaseUrl()}/readings";
             var response = await _httpClient.PostAsJsonAsync(url, dto);
-            var body = await response.Content.ReadAsStringAsync();
+            var body = await response.Content.ReadAsStringAsync(ctoken);
 
-            if(response.IsSuccessStatusCode)
+            if (response.IsSuccessStatusCode)
             {
-                var json = JsonSerializer.Serialize(ControllerUtilities.ConvertToReadingsMqttDto(deviceId,dto));
-                await _mqttPublisher.PublishJsonAsync(json, ctoken);
-                return Ok(new { message = "Reading published to MQTT broker." });
+                try
+                {
+                    var json = JsonSerializer.Serialize(ControllerUtilities.ConvertToReadingsMqttDto(deviceId, dto));
+                    await _mqttPublisher.PublishJsonAsync(json, ctoken);
+
+                    var savedReading = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ctoken);
+                    return StatusCode(StatusCodes.Status201Created, new { message = "Reading forwarded to data service and published to MQTT broker successfully.", body= savedReading});
+                }
+                catch (Exception ex)
+                {
+                    return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Failed to publish reading to MQTT broker.", error = ex.Message });
+                }
             }
             else
             {

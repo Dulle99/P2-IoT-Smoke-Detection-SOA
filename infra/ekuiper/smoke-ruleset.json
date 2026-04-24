@@ -1,0 +1,9 @@
+{
+  "streams": {
+    "readings": "CREATE STREAM readings (deviceId string, temperature float, smokeLevel float, timestampUtc string) WITH (DATASOURCE=\"iot/smoke/readings\", FORMAT=\"json\")"
+  },
+  "tables": {},
+  "rules": {
+    "smoke_alert_rule": "{\"id\":\"smoke_alert_rule\",\"sql\":\"SELECT deviceId, temperature, smokeLevel, timestampUtc FROM readings WHERE smokeLevel >= 70\",\"actions\":[{\"mqtt\":{\"server\":\"tcp://mosquitto:1883\",\"topic\":\"iot/smoke/events\",\"qos\":1,\"sendSingle\":true,\"dataTemplate\":\"{{toJson .}}\"}}]}"
+  }
+}
