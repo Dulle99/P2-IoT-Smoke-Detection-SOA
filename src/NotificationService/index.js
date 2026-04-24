@@ -8,7 +8,7 @@ const PROTO_PATH = path.join(__dirname, "notification.proto");
 
 // MQTT configuration
 const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
-const MQTT_TOPIC_NOTIFICATIONS = process.env.MQTT_TOPIC_NOTIFICATIONS || "iot/smoke/notifications";
+const MQTT_TOPIC_NOTIFICATIONS = process.env.MQTT_TOPIC_NOTIFICATIONS || "iot/pm25/notifications";
 
 const mqttClient = mqtt.connect(MQTT_BROKER_URL);
 
@@ -30,17 +30,17 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
 
 const notificationProto = grpc.loadPackageDefinition(packageDefinition).notification;
 
-function sendSmokeAlert(call, callback) {
+function sendPm25Alert(call, callback) {
     const req = call.request;
     console.log("Received smoke alert via gRPC:", req);
 
     const notification = {
-        type: "SMOKE_ALERT",
+        type: "PM25_ALERT",
         deviceId: req.deviceId,
-        smokeLevel: req.smokeLevel,
+        pm25: req.pm25,
         temperature: req.temperature,
         timestampUtc: req.timestampUtc,
-        message: `Smoke alert from device ${req.deviceId} detected smoke level ${req.smokeLevel} at ${new Date(req.timestampUtc).toISOString()}`,
+        message: `PM25 alert from device ${req.deviceId} detected PM25 level ${req.pm25} at ${new Date(req.timestampUtc).toISOString()}`,
     };
 
     mqttClient.publish(MQTT_TOPIC_NOTIFICATIONS, JSON.stringify(notification), { qos: 1 }, (err) => {
@@ -50,7 +50,7 @@ function sendSmokeAlert(call, callback) {
             return;
         }
 
-        console.log("Published smoke alert to MQTT topic:", MQTT_TOPIC_NOTIFICATIONS);
+        console.log("Published PM25 alert to MQTT topic:", MQTT_TOPIC_NOTIFICATIONS);
         callback(null, { status: "OK" });
     });
 }
@@ -59,7 +59,7 @@ function main() {
     const server = new grpc.Server();
 
     server.addService(notificationProto.NotificationService.service, {
-        sendSmokeAlert: sendSmokeAlert,
+        sendPm25Alert: sendPm25Alert,
     });
 
     const addr = "0.0.0.0:3000";

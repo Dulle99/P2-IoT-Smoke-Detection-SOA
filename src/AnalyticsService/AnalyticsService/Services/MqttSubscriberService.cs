@@ -54,12 +54,6 @@ namespace AnalyticsService.Services
                         reading = JsonSerializer.Deserialize<ReadingDto>(payload, opts);
                     }
 
-                    /*if (reading is null)
-                    {
-                        Console.WriteLine("Invalid JSON payload");
-                        return;
-                    }
-                    var reading = JsonSerializer.Deserialize<ReadingDto>(payload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });*/
                     if (reading == null)
                     {
                         Console.WriteLine($"Invalid JSON payload");
@@ -73,23 +67,23 @@ namespace AnalyticsService.Services
                     }
 
 
-                    Console.WriteLine($"EVENT DETECTED: from {reading.DeviceId} (Smoke={reading.SmokeLevel})");
+                    Console.WriteLine($"EVENT DETECTED: from {reading.DeviceId} (Pm2.5={reading.Pm25})");
 
                     try
                     {
-                        await _eventWriter.WriteSmokeEventAsync(reading.DeviceId, reading.SmokeLevel, reading.Temperature, timestamp.UtcDateTime, stoppingToken);
+                        await _eventWriter.WritePM25EventAsync(reading.DeviceId, reading.Pm25, reading.Temperature, timestamp.UtcDateTime, stoppingToken);
                         Console.WriteLine(" Event written to InfluxDB");
 
                         //grpc notification
-                        var req = new SmokeAlertRequest
+                        var req = new PM25AlertRequest
                         {
                             DeviceId = reading.DeviceId,
-                            SmokeLevel = reading.SmokeLevel,
+                            Pm25 = reading.Pm25,
                             Temperature = reading.Temperature,
                             TimestampUtc = timestamp.UtcDateTime.ToString("o")
                         };
 
-                        var resp = await _notificationClient.SendSmokeAlertAsync(req, cancellationToken: stoppingToken);
+                        var resp = await _notificationClient.SendPM25AlertAsync(req, cancellationToken: stoppingToken);
                         Console.WriteLine($"Notification response: {resp.Status}");
                     }
                     catch (Exception ex)
@@ -109,8 +103,8 @@ namespace AnalyticsService.Services
             await _mqttClient.ConnectAsync(options, stoppingToken);
             Console.WriteLine("Connected to MQTT broker");
 
-            await _mqttClient.SubscribeAsync("iot/smoke/events");
-            Console.WriteLine("Subscribed to topic: iot/smoke/events");
+            await _mqttClient.SubscribeAsync("iot/pm25/events");
+            Console.WriteLine("Subscribed to topic: iot/pm25/events");
 
             while (!stoppingToken.IsCancellationRequested)
             {

@@ -5,7 +5,7 @@
     (
         string DeviceId,
         double Temperature,
-        double SmokeLevel,
+        double Pm25,
         string TimestampUtc
     );
 

@@ -5,16 +5,16 @@ option csharp_namespace = "AnalyticsService.Protos";
 package notification;
 
 service NotificationService{
-    rpc SendSmokeAlert (SmokeAlertRequest) returns (SmokeAlertResponse);
+    rpc SendPM25Alert (PM25AlertRequest) returns (PM25AlertResponse);
 }
 
-message SmokeAlertRequest{
+message PM25AlertRequest{
     string deviceId = 1;
-  double smokeLevel = 2;
+  double pm25 = 2;
   double temperature = 3;
   string timestampUtc = 4;
 }
 
-message SmokeAlertResponse {
+message PM25AlertResponse {
   string status = 1;
 }

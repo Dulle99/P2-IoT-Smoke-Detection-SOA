@@ -9,7 +9,7 @@ done
 echo "Importing eKuiper ruleset..."
 wget -qO- \
   --header="Content-Type: application/json" \
-  --post-data='{"file":"file:///kuiper/etc/smoke-ruleset.json"}' \
+  --post-data='{"file":"file:///kuiper/etc/pm25-ruleset.json"}' \
   http://ekuiper:9081/ruleset/import
 
 echo "eKuiper ruleset imported."

@@ -15,7 +15,7 @@ namespace AnalyticsService.Services
 
     public interface IEventWriter
     {
-        Task WriteSmokeEventAsync(string deviceId, double smokeLevel, double temperature, DateTime timestampUtc, CancellationToken ct);
+        Task WritePM25EventAsync(string deviceId, double pm25, double temperature, DateTime timestampUtc, CancellationToken ct);
     }
 
     public class InfluxEventWriter : IEventWriter
@@ -29,12 +29,12 @@ namespace AnalyticsService.Services
             _client = new InfluxDBClient(_options.Url, _options.Token);
         }
 
-        public async Task WriteSmokeEventAsync(string deviceId, double smokeLevel, double temperature, DateTime timestampUtc, CancellationToken ct)
+        public async Task WritePM25EventAsync(string deviceId, double pm25, double temperature, DateTime timestampUtc, CancellationToken ct)
         {
             var point = PointData
-                .Measurement("smoke_events")
+                .Measurement("pm25_events")
                 .Tag("device_id", deviceId)
-                .Field("smoke_level", smokeLevel)
+                .Field("pm25    ", pm25)
                 .Field("temperature", temperature)
                 .Timestamp(timestampUtc, WritePrecision.Ns);
 

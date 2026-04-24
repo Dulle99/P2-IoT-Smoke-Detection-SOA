@@ -1,0 +1,9 @@
+{
+  "streams": {
+    "readings": "CREATE STREAM readings (deviceId string, temperature float, pm25 float, timestampUtc string) WITH (DATASOURCE=\"iot/smoke/readings\", FORMAT=\"json\")"
+  },
+  "tables": {},
+  "rules": {
+    "pm25_alert_rule": "{\"id\":\"pm25_alert_rule\",\"sql\":\"SELECT deviceId, temperature, pm25, timestampUtc FROM readings WHERE pm25 >= 50\",\"actions\":[{\"mqtt\":{\"server\":\"tcp://mosquitto:1883\",\"topic\":\"iot/pm25/events\",\"qos\":1,\"sendSingle\":true,\"dataTemplate\":\"{{toJson .}}\"}}]}"
+  }
+}
