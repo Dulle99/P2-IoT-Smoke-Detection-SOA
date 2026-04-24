@@ -22,7 +22,7 @@ services:
       DOCKER_INFLUXDB_INIT_USERNAME: admin
       DOCKER_INFLUXDB_INIT_PASSWORD: password
       DOCKER_INFLUXDB_INIT_ORG: iot-org
-      DOCKER_INFLUXDB_INIT_BUCKET: smoke-bucket
+      DOCKER_INFLUXDB_INIT_BUCKET: PM25-bucket
       DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: supersecrettoken
     networks:
       - iot-network
@@ -39,7 +39,7 @@ services:
       MQTT_SOURCE__DEFAULT__QOS: "1"
     volumes:
       - ./infra/ekuiper/mqtt_source.yaml:/kuiper/etc/mqtt_source.yaml
-      - ./infra/ekuiper/smoke-ruleset.json:/kuiper/etc/smoke-ruleset.json
+      - ./infra/ekuiper/pm25-ruleset.json:/kuiper/etc/pm25-ruleset.json
       - ./infra/ekuiper/data:/kuiper/data
       - ./infra/ekuiper/log:/kuiper/log
   
@@ -93,7 +93,7 @@ services:
   dataservice:
     build:
       context: ./src/DataService
-    container_name: smoke-dataservice
+    container_name: PM25-dataservice
     environment:
       - PORT=5001
       - MONGO_URL=mongodb://mongo:27017

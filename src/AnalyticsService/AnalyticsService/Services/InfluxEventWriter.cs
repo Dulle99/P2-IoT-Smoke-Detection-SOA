@@ -34,7 +34,7 @@ namespace AnalyticsService.Services
             var point = PointData
                 .Measurement("pm25_events")
                 .Tag("device_id", deviceId)
-                .Field("pm25    ", pm25)
+                .Field("pm25", pm25)
                 .Field("temperature", temperature)
                 .Timestamp(timestampUtc, WritePrecision.Ns);
 

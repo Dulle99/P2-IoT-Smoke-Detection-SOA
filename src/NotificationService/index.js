@@ -32,7 +32,7 @@ const notificationProto = grpc.loadPackageDefinition(packageDefinition).notifica
 
 function sendPm25Alert(call, callback) {
     const req = call.request;
-    console.log("Received smoke alert via gRPC:", req);
+    console.log("Received pm25 alert via gRPC:", req);
 
     const notification = {
         type: "PM25_ALERT",

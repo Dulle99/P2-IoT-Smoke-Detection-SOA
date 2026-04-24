@@ -1,6 +1,6 @@
 {
   "streams": {
-    "readings": "CREATE STREAM readings (deviceId string, temperature float, pm25 float, timestampUtc string) WITH (DATASOURCE=\"iot/smoke/readings\", FORMAT=\"json\")"
+    "readings": "CREATE STREAM readings (deviceId string, temperature float, pm25 float, timestampUtc string) WITH (DATASOURCE=\"iot/pm25/readings\", FORMAT=\"json\")"
   },
   "tables": {},
   "rules": {
