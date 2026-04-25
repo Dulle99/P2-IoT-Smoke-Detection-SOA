@@ -12,7 +12,7 @@ Service-Oriented Architecture Project
 
 This project is the second phase of an IoT monitoring system built with a Service-Oriented Architecture.
 
-It extends the basic data collection flow from Project 1 (https://github.com/Dulle99/P1-IoT-Smoke-Detection-SOA) by adding **event-driven analytics**, **stream processing**, **time-series storage**, and **cross-service notification**.
+It extends the basic data collection flow from Project 1 by adding **event-driven analytics**, **stream processing**, **time-series storage**, and **cross-service notification**.
 
 The system receives environmental sensor readings, stores the raw readings in MongoDB, publishes selected values to MQTT, processes them through **eKuiper**, detects significant **PM2.5 events**, stores detected events in **InfluxDB**, and then sends a notification through **gRPC** to a separate notification microservice.
 
@@ -288,16 +288,19 @@ You can verify the loaded rules with:
 Invoke-RestMethod -Method Get -Uri "http://localhost:9081/rules"
 ```
 
+You should see:
+- `pm25_alert_rule`
+- `running`
+
 ---
 
 ## Prerequisites
 
 Before running the project, make sure you have:
-
 - **Docker Desktop**
 - **Git**
-- optional: **.NET SDK** if you want to run .NET services locally
-- optional: **Node.js** if you want to run Node services locally
+- optional: **.NET SDK**
+- optional: **Node.js**
 
 ---
 
@@ -328,7 +331,6 @@ docker compose up --build
 ## Important Notes About Clean Restarts
 
 eKuiper uses local bind-mounted folders:
-
 - `infra/ekuiper/data`
 - `infra/ekuiper/log`
 
@@ -345,6 +347,15 @@ Then start again:
 
 ```powershell
 docker compose up --build
+```
+
+### Important Windows Note for the eKuiper Init Script
+If you test the project from a fresh clone on Windows and the PM2.5 rule is not imported automatically, make sure `infra/ekuiper/init-rules.sh` is saved with **LF** line endings, not **CRLF**.
+
+Recommended `.gitattributes` entry:
+
+```gitattributes
+*.sh text eol=lf
 ```
 
 ---
@@ -390,7 +401,7 @@ Use this request to trigger the full PM2.5 flow:
 ```powershell
 Invoke-RestMethod `
   -Method Post `
-  -Uri "http://localhost:5000/api/ReadingsMqtt/sensor-1" `
+  -Uri "http://localhost:5000/api/ReadingsMqtt/device1" `
   -ContentType "application/json" `
   -Body '{
     "utc": 1713988800,
@@ -406,64 +417,173 @@ Invoke-RestMethod `
 
 ---
 
-## How to Verify the End-to-End Flow
+## How to Test the Project
 
-### 1. Subscribe to MQTT topics
+This is the recommended end-to-end test procedure.
 
-Raw readings:
+### Step 1 – Start the project
 
+```powershell
+docker compose up --build
+```
+
+### Step 2 – Verify that eKuiper loaded the PM2.5 rule
+
+```powershell
+Invoke-RestMethod -Method Get -Uri "http://localhost:9081/rules"
+```
+
+You should see:
+- `pm25_alert_rule`
+- `running`
+
+If it is missing, the MQTT event chain will stop at `iot/pm25/readings`.
+
+### Step 3 – Subscribe to all MQTT topics
+
+Open three different terminals.
+
+**Terminal 1 – raw readings**
 ```powershell
 docker exec -it mosquitto mosquitto_sub -v -t iot/pm25/readings
 ```
 
-Filtered events:
-
+**Terminal 2 – filtered events**
 ```powershell
 docker exec -it mosquitto mosquitto_sub -v -t iot/pm25/events
 ```
 
-Notifications:
-
+**Terminal 3 – notifications**
 ```powershell
 docker exec -it mosquitto mosquitto_sub -v -t iot/pm25/notifications
 ```
 
-### 2. Submit the test request
-Use the example POST request shown above.
+### Step 4 – Send a POST request through `ReadingsMqtt`
 
-### 3. Check Analytics logs
+Use the Gateway endpoint that both:
+1. stores the raw reading in the database
+2. publishes the transformed PM2.5 event to MQTT
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://localhost:5000/api/ReadingsMqtt/device1" `
+  -ContentType "application/json" `
+  -Body '{
+    "utc": 1713988800,
+    "temperatureC": 27.5,
+    "humidityPercent": 45.2,
+    "eCo2Ppm": 600,
+    "tVocPpb": 120,
+    "pressureHpa": 1012.8,
+    "pm25": 77.0,
+    "fireAlarm": true
+  }'
+```
+
+Expected HTTP result:
+- status `201`
+- a message that the reading was forwarded to DataService and published to MQTT
+
+### Step 5 – Expected MQTT results
+
+On `iot/pm25/readings` you should see something like:
+
+```json
+{"deviceId":"device1","temperature":27.5,"pm25":77,"timestampUtc":"2024-04-24T20:00:00.0000000Z"}
+```
+
+On `iot/pm25/events` you should see a filtered PM2.5 event from eKuiper.
+
+On `iot/pm25/notifications` you should see a notification payload published by NotificationService.
+
+### Step 6 – Check Analytics logs
 
 ```powershell
 docker logs analytics-service --tail 50
 ```
 
-Expected messages:
-- connected to MQTT
-- subscribed to `iot/pm25/events`
-- event detected
-- event written to InfluxDB
-- notification response `OK`
+Expected output:
+- `Connected to MQTT broker`
+- `Subscribed to topic: iot/pm25/events`
+- `EVENT DETECTED`
+- `Event written to InfluxDB`
+- `Notification response: OK`
 
-### 4. Check Notification logs
+### Step 7 – Check Notification logs
 
 ```powershell
 docker logs notification-service --tail 50
 ```
 
-Expected messages:
+Expected output:
 - gRPC server running
-- MQTT connection established
-- PM2.5 alert received
-- PM2.5 notification published
+- connected to MQTT broker
+- received PM2.5 alert via gRPC
+- published PM2.5 alert to `iot/pm25/notifications`
 
-### 5. Check InfluxDB
-Open `http://localhost:8086`, choose:
+### Step 8 – Check InfluxDB
+
+Open `http://localhost:8086` and select:
 - bucket: `PM25-bucket`
 - measurement: `pm25_events`
 
-If no data appears immediately:
+You should see fields:
+- `pm25`
+- `temperature`
+
+and a tag:
+- `device_id`
+
+### Step 9 – If InfluxDB looks empty
+
+This is usually a **time-range issue**, not a write issue.
+
+The event timestamp is derived from the request field `utc`, so the stored event time may be in the past.
+
+If the point does not appear:
 - refresh the browser
-- widen the selected time range in Data Explorer
+- widen the time range
+- use a custom time range that includes the event timestamp
+
+---
+
+## Manual Troubleshooting
+
+### If nothing appears on `iot/pm25/readings`
+Check:
+- are you calling `POST /api/ReadingsMqtt/{deviceId}` and not only `POST /api/readings`
+- Gateway logs:
+```powershell
+docker logs gateway-service --tail 100
+```
+
+### If data appears on `iot/pm25/readings` but not on `iot/pm25/events`
+Check:
+- eKuiper rule import:
+```powershell
+Invoke-RestMethod -Method Get -Uri "http://localhost:9081/rules"
+```
+- eKuiper logs:
+```powershell
+docker logs ekuiper --tail 100
+docker logs ekuiper-init --tail 100
+```
+
+### If data appears on `iot/pm25/events` but not in Analytics logs
+Check:
+```powershell
+docker logs analytics-service --tail 100
+```
+
+### If Analytics detects the event but notifications do not appear
+Check:
+```powershell
+docker logs notification-service --tail 100
+```
+
+### If notifications appear but InfluxDB looks empty
+The most common cause is the selected time range in the InfluxDB UI.
 
 ---
 
