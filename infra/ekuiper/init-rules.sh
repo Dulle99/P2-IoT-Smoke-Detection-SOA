@@ -6,10 +6,12 @@ until wget -qO- http://ekuiper:9081/rules >/dev/null 2>&1; do
   sleep 2
 done
 
+echo "Preparing import payload..."
+cat >/tmp/import.json <<EOF
+{"file":"file:///kuiper/etc/pm25-ruleset.json"}
+EOF
+
 echo "Importing eKuiper ruleset..."
-wget -qO- \
-  --header="Content-Type: application/json" \
-  --post-data='{"file":"file:///kuiper/etc/pm25-ruleset.json"}' \
-  http://ekuiper:9081/ruleset/import
+wget -qO- --header="Content-Type: application/json" --post-file=/tmp/import.json http://ekuiper:9081/ruleset/import
 
 echo "eKuiper ruleset imported."
